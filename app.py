@@ -12,6 +12,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_bcrypt import Bcrypt
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
+from profile_validation import build_profile_updates
 
 load_dotenv()
 
@@ -852,11 +853,9 @@ def edit_profile():
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
-    # Text fields
-    update_fields = {}
-    for field in ['name','bio','location','college','headline','linkedin_url','twitter_url','website_url','resume_url']:
-        if field in data:
-            update_fields[field] = data[field].strip()
+    update_fields, error = build_profile_updates(data)
+    if error:
+        return jsonify({"success": False, "error": error}), 400
     if update_fields:
         db.user.update_one({'_id': current_user.id}, {'$set': update_fields})
         current_user.reload()
