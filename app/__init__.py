@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 
+from app.admin import admin_bp
 from app.auth import auth_bp
 from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth
 from app.leaderboard import leaderboard_bp
@@ -51,7 +52,11 @@ def create_app():
     db.user.create_index("email", unique=True, sparse=True)
     db.user.create_index("github_id", unique=True, sparse=True)
     db.user.create_index("google_id", unique=True, sparse=True)
+    db.user.create_index("is_admin")
     db.topic.create_index("name", unique=True)
+
+    # Lightweight schema backfill for legacy user documents.
+    db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
 
     data_path = os.path.abspath(os.path.join(app.root_path, os.pardir, "data.json"))
     app._db_initialized = False
@@ -90,6 +95,7 @@ def create_app():
     app.register_blueprint(profile_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(search_bp)
+    app.register_blueprint(admin_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
